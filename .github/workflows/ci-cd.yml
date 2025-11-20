@@ -120,8 +120,8 @@ jobs:
         
     - name: Create build version
       run: |
-        # Create clean main file
-        (Get-Content TeNRiS.lpr) -replace 'Classes, Graphics,', 'Classes,' -replace 'DGLEngine_header', 'DGLEngine_Stub' | Set-Content TeNRiS_Build.lpr
+        # Create clean main file without resource directive
+        (Get-Content TeNRiS.lpr) -replace 'Classes, Graphics,', 'Classes,' -replace 'DGLEngine_header', 'DGLEngine_Stub' -replace '\{\$R \*\.res\}', '' | Set-Content TeNRiS_Build.lpr
         
         # Remove TBitmap usage
         $content = Get-Content TeNRiS_Build.lpr -Raw
