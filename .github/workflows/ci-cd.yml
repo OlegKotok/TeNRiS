@@ -16,12 +16,20 @@ jobs:
       run: |
         choco install freepascal --version=3.2.2 -y
         
+    - name: Remove Graphics dependency
+      run: |
+        # Create version without Graphics unit
+        (Get-Content TeNRiS.lpr) -replace 'Classes, Graphics,', 'Classes,' | Set-Content TeNRiS_Build.lpr
+        # Replace TBitmap usage with direct file loading
+        (Get-Content TeNRiS_Build.lpr) -replace 'bmp1:=TBitmap\.Create;.*?bmp2\.Free;', 'logo:=LoadTextureFromFile(GetCurrentDir+''\texture\logo.bmp'');' -replace '(?s)bmp1.*?bmp2\.Free;', 'logo:=LoadTextureFromFile(GetCurrentDir+''\texture\logo.bmp'');' | Set-Content TeNRiS_Build.lpr
+        
     - name: Build TeNRiS II
       run: |
         $env:PATH = "C:\tools\freepascal\bin\i386-win32;" + $env:PATH
         New-Item -ItemType Directory -Force -Path "build"
         New-Item -ItemType Directory -Force -Path "build\units"
-        fpc -Mdelphi -Twin32 -O3 -WG -FE"build" -FU"build\units" TeNRiS.lpr
+        fpc -Mdelphi -Twin32 -O3 -WG -FE"build" -FU"build\units" TeNRiS_Build.lpr
+        Rename-Item "build\TeNRiS_Build.exe" "TeNRiS.exe"
         
     - name: Package game
       run: |
