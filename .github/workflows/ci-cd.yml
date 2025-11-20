@@ -14,10 +14,14 @@ jobs:
     - name: Install Lazarus
       run: choco install lazarus -y
       
-    - name: Fix DGLEngine header for Windows
+    - name: Fix DGLEngine header
       run: |
-        # Remove Tlhelp32 dependency
+        # Remove problematic dependencies and OpenGL types
         (Get-Content DGLEngine_header.pas) -replace 'uses Windows, Tlhelp32, Classes, SysUtils, Graphics, OpenGl;', 'uses Windows, Classes, SysUtils, Graphics;' | Set-Content DGLEngine_header.pas
+        
+        # Replace GLFloat with Single
+        (Get-Content DGLEngine_header.pas) -replace 'GLFloat', 'Single' | Set-Content DGLEngine_header.pas
+        (Get-Content DGLEngine_header.pas) -replace 'glFloat', 'Single' | Set-Content DGLEngine_header.pas
         
     - name: Build TeNRiS II
       run: |
