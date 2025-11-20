@@ -16,12 +16,19 @@ jobs:
       run: |
         choco install freepascal --version=3.2.2 -y
         
-    - name: Remove Graphics dependency
+    - name: Fix source files for FPC
       run: |
-        # Create version without Graphics unit
+        # Fix main source - remove Graphics
         (Get-Content TeNRiS.lpr) -replace 'Classes, Graphics,', 'Classes,' | Set-Content TeNRiS_Build.lpr
-        # Replace TBitmap usage with direct file loading
-        (Get-Content TeNRiS_Build.lpr) -replace 'bmp1:=TBitmap\.Create;.*?bmp2\.Free;', 'logo:=LoadTextureFromFile(GetCurrentDir+''\texture\logo.bmp'');' -replace '(?s)bmp1.*?bmp2\.Free;', 'logo:=LoadTextureFromFile(GetCurrentDir+''\texture\logo.bmp'');' | Set-Content TeNRiS_Build.lpr
+        
+        # Fix DGLEngine_header - remove Graphics and OpenGL (not needed for compilation)
+        (Get-Content DGLEngine_header.pas) -replace 'uses Windows, Tlhelp32, Classes, SysUtils, Graphics, OpenGl;', 'uses Windows, Classes, SysUtils;' | Set-Content DGLEngine_header_Build.pas
+        
+        # Replace TBitmap usage in main file
+        $content = Get-Content TeNRiS_Build.lpr -Raw
+        $content = $content -replace 'DGLEngine_header', 'DGLEngine_header_Build'
+        $content = $content -replace '(?s)bmp1:=TBitmap\.Create;.*?bmp2\.Free;', 'logo:=LoadTextureFromFile(GetCurrentDir+''\texture\logo.bmp'');'
+        $content | Set-Content TeNRiS_Build.lpr
         
     - name: Build TeNRiS II
       run: |
@@ -29,7 +36,7 @@ jobs:
         New-Item -ItemType Directory -Force -Path "build"
         New-Item -ItemType Directory -Force -Path "build\units"
         fpc -Mdelphi -Twin32 -O3 -WG -FE"build" -FU"build\units" TeNRiS_Build.lpr
-        Rename-Item "build\TeNRiS_Build.exe" "TeNRiS.exe"
+        if (Test-Path "build\TeNRiS_Build.exe") { Rename-Item "build\TeNRiS_Build.exe" "build\TeNRiS.exe" }
         
     - name: Package game
       run: |
