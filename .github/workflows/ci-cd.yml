@@ -17,7 +17,7 @@ jobs:
     - name: Build TeNRiS II
       run: |
         $env:PATH += ";C:\tools\freepascal\bin\i386-win32"
-        fpc -Mdelphi -Twin32 -O3 -WG TeNRiS.dpr
+        fpc -Mdelphi -Twin32 -O3 -WG TeNRiS.lpr
         
     - name: Package game
       run: |
