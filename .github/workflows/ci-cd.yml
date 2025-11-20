@@ -1,186 +1,59 @@
-name: Build and Release
+name: Package Game
 
 on:
   push:
-  pull_request:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: windows-latest
+  package:
+    runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup Free Pascal
+    - name: Package TeNRiS II
       run: |
-        choco install freepascal --version=3.2.2 -y
+        mkdir release
+        cp TeNRiS.dpr release/
+        cp DGLEngine_header.pas release/
+        cp DGLEngine.dll release/
+        cp *.dat release/ 2>/dev/null || true
+        cp *.ini release/ 2>/dev/null || true
+        cp readme.txt release/ 2>/dev/null || true
+        cp -r sounds release/ 2>/dev/null || true
+        cp -r texture release/ 2>/dev/null || true
+        cp -r girls release/ 2>/dev/null || true
         
-    - name: Create minimal DGL stub
-      run: |
-        @"
-        unit DGLEngine_Stub;
-        interface
-        uses Windows, Classes, SysUtils;
+        # Create build instructions
+        cat > release/BUILD.md << 'EOF'
+        # How to Build TeNRiS II
         
-        function LoadDGLEngineDLL(FileName: string): boolean;
-        procedure FreeDGLEngineDLL(EXE_FileName: string = '');
+        ## Requirements
+        - Free Pascal Compiler or Delphi
+        - Windows (for DGLEngine.dll)
         
-        // Minimal stubs for compilation
-        const
-          PROC_DRAW = 1; PROC_PROCESS = 2; PROC_INIT = 3; PROC_FREE = 4;
+        ## Build Commands
+        ```bash
+        # With Free Pascal
+        fpc -Mdelphi -Twin32 -O3 -WG TeNRiS.dpr
         
-        var
-          DGLEngineDLL_Handle: THandle;
+        # With Delphi
+        dcc32 TeNRiS.dpr
+        ```
         
-        procedure RegProcedure(ProcType: integer; ProcAddr: pointer); stdcall;
-        procedure SetEngineInitParametrs(w, h, bpp, freq: integer; fs, vsync, fsaa, stencil: boolean); stdcall;
-        procedure SetGameProcessInterval(interval: integer); stdcall;
-        procedure ApplicationName(name: string); stdcall;
-        function AddTimer(interval: cardinal; proc: pointer): cardinal; stdcall;
-        procedure PleaseNoLogo; stdcall;
-        procedure EnableTimer(timer: cardinal); stdcall;
-        procedure DisableTimer(timer: cardinal); stdcall;
-        procedure StartEngine; stdcall;
-        procedure QuitEngine; stdcall;
-        
-        // Graphics stubs
-        function LoadTextureFromFile(filename: string): cardinal; stdcall;
-        function LoadFontFromFile(filename: string): cardinal; stdcall;
-        procedure DrawText2D(font: cardinal; x, y: integer; text: string; color: integer; alpha: integer); stdcall;
-        procedure DrawRectangle2D_Fill_VertexColor(x, y, w, h: integer; c1, c2, c3, c4: integer; a1, a2, a3, a4: byte); stdcall;
-        procedure DrawRectangle2D(x, y, w, h: integer; color: integer; alpha: integer; filled: boolean); stdcall;
-        procedure DrawTexture2D_Simple(texture: cardinal; x, y, w, h: integer); stdcall;
-        procedure DrawTexture2D(texture: cardinal; x, y, w, h: integer; angle: integer; alpha: integer; color: integer; fx, fy, fz: boolean); stdcall;
-        procedure Begin2D; stdcall;
-        procedure End2D; stdcall;
-        
-        // Audio stubs
-        procedure DirectSoundInit; stdcall;
-        function LoadSample(filename: string): integer; stdcall;
-        procedure PlaySample(sample: integer); stdcall;
-        procedure SetSample3DPosition(sample: integer; x, y, z: real); stdcall;
-        procedure SetSampleVolume(sample: integer; volume: integer); stdcall;
-        procedure PlayMusic(filename: string; loop: boolean); stdcall;
-        procedure StopMusic; stdcall;
-        function IsMusicPlaying: boolean; stdcall;
-        
-        // Input stubs
-        function IsKeyPressed(key: integer): boolean; stdcall;
-        const
-          key_up = 38; Key_Left = 37; Key_Right = 39; Key_Space = 32;
-          Key_Down = 40; Key_Escape = 27; Key_F1 = 112; Key_R = 82; Key_S = 83;
-        
-        // Screen stubs
-        function GetScreenResX: integer; stdcall;
-        procedure ShowCursor(show: boolean); stdcall;
-        
-        implementation
-        
-        function LoadDGLEngineDLL(FileName: string): boolean;
-        begin Result := false; end;
-        
-        procedure FreeDGLEngineDLL(EXE_FileName: string = '');
-        begin end;
-        
-        // All procedures as empty stubs
-        procedure RegProcedure(ProcType: integer; ProcAddr: pointer); begin end;
-        procedure SetEngineInitParametrs(w, h, bpp, freq: integer; fs, vsync, fsaa, stencil: boolean); begin end;
-        procedure SetGameProcessInterval(interval: integer); begin end;
-        procedure ApplicationName(name: string); begin end;
-        function AddTimer(interval: cardinal; proc: pointer): cardinal; begin Result := 1; end;
-        procedure PleaseNoLogo; begin end;
-        procedure EnableTimer(timer: cardinal); begin end;
-        procedure DisableTimer(timer: cardinal); begin end;
-        procedure StartEngine; begin end;
-        procedure QuitEngine; begin end;
-        function LoadTextureFromFile(filename: string): cardinal; begin Result := 1; end;
-        function LoadFontFromFile(filename: string): cardinal; begin Result := 1; end;
-        procedure DrawText2D(font: cardinal; x, y: integer; text: string; color: integer; alpha: integer); begin end;
-        procedure DrawRectangle2D_Fill_VertexColor(x, y, w, h: integer; c1, c2, c3, c4: integer; a1, a2, a3, a4: byte); begin end;
-        procedure DrawRectangle2D(x, y, w, h: integer; color: integer; alpha: integer; filled: boolean); begin end;
-        procedure DrawTexture2D_Simple(texture: cardinal; x, y, w, h: integer); begin end;
-        procedure DrawTexture2D(texture: cardinal; x, y, w, h: integer; angle: integer; alpha: integer; color: integer; fx, fy, fz: boolean); begin end;
-        procedure Begin2D; begin end;
-        procedure End2D; begin end;
-        procedure DirectSoundInit; begin end;
-        function LoadSample(filename: string): integer; begin Result := 1; end;
-        procedure PlaySample(sample: integer); begin end;
-        procedure SetSample3DPosition(sample: integer; x, y, z: real); begin end;
-        procedure SetSampleVolume(sample: integer; volume: integer); begin end;
-        procedure PlayMusic(filename: string; loop: boolean); begin end;
-        procedure StopMusic; begin end;
-        function IsMusicPlaying: boolean; begin Result := false; end;
-        function IsKeyPressed(key: integer): boolean; begin Result := false; end;
-        function GetScreenResX: integer; begin Result := 800; end;
-        procedure ShowCursor(show: boolean); begin end;
-        
-        end.
-        "@ | Out-File -FilePath "DGLEngine_Stub.pas" -Encoding UTF8
-        
-    - name: Create build version
-      run: |
-        # Create clean main file without resource directive
-        (Get-Content TeNRiS.lpr) -replace 'Classes, Graphics,', 'Classes,' -replace 'DGLEngine_header', 'DGLEngine_Stub' -replace '\{\$R \*\.res\}', '' | Set-Content TeNRiS_Build.lpr
-        
-        # Remove TBitmap usage
-        $content = Get-Content TeNRiS_Build.lpr -Raw
-        $content = $content -replace '(?s)bmp1:=TBitmap\.Create;.*?bmp2\.Free;', 'logo:=LoadTextureFromFile(GetCurrentDir+''\texture\logo.bmp'');'
-        $content | Set-Content TeNRiS_Build.lpr
-        
-    - name: Build TeNRiS II
-      run: |
-        $env:PATH = "C:\tools\freepascal\bin\i386-win32;" + $env:PATH
-        New-Item -ItemType Directory -Force -Path "build"
-        fpc -Mdelphi -Twin32 -O3 -WG -FE"build" TeNRiS_Build.lpr
-        if (Test-Path "build\TeNRiS_Build.exe") { 
-          Move-Item "build\TeNRiS_Build.exe" "build\TeNRiS.exe" -Force
-        }
-        
-    - name: Package game
-      run: |
-        Copy-Item "DGLEngine.dll" "build\" -ErrorAction SilentlyContinue
-        Copy-Item "*.dat" "build\" -ErrorAction SilentlyContinue
-        Copy-Item "*.ini" "build\" -ErrorAction SilentlyContinue
-        Copy-Item "readme.txt" "build\" -ErrorAction SilentlyContinue
-        if (Test-Path "sounds") { Copy-Item "sounds" "build\" -Recurse }
-        if (Test-Path "texture") { Copy-Item "texture" "build\" -Recurse }
-        if (Test-Path "girls") { Copy-Item "girls" "build\" -Recurse }
+        ## Run
+        ```bash
+        TeNRiS.exe
+        ```
+        EOF
         
     - name: Create release package
       run: |
-        $timestamp = Get-Date -Format "yyyy-MM-dd-HHmm"
-        $branch = "${{ github.ref_name }}"
-        $filename = "TeNRiS-II-$branch-$timestamp.zip"
-        Compress-Archive -Path "build\*" -DestinationPath $filename
-        echo "RELEASE_FILE=$filename" >> $env:GITHUB_ENV
+        cd release
+        zip -r ../TeNRiS-II-Source-$(date +%Y%m%d).zip .
         
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: TeNRiS-II-${{ github.ref_name }}
-        path: ${{ env.RELEASE_FILE }}
-        
-    - name: Create Release
-      if: github.event_name == 'push'
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: build-${{ github.run_number }}-${{ github.ref_name }}
-        name: TeNRiS II Build ${{ github.run_number }} (${{ github.ref_name }})
-        files: ${{ env.RELEASE_FILE }}
-        body: |
-          **Automatic build from branch:** `${{ github.ref_name }}`
-          **Commit:** ${{ github.sha }}
-          **Build:** #${{ github.run_number }}
-          
-          **Game:** Tetris with Numbers - OpenGL version with 3D sound
-          **System Requirements:** Windows 7+, DirectX 9.0c
-          
-          **Controls:**
-          - Arrow keys: Move pieces
-          - Up: Rotate, Space: Drop
-          - R: Restart, S: Toggle music
-          - Esc: Quit
-        prerelease: ${{ github.ref_name != 'main' }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        name: TeNRiS-II-Source
+        path: TeNRiS-II-Source-*.zip
