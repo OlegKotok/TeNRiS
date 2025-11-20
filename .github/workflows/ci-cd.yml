@@ -1,0 +1,70 @@
+name: Build and Release
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Free Pascal
+      run: choco install freepascal -y
+      
+    - name: Build TeNRiS II
+      run: |
+        $env:PATH += ";C:\tools\fpc\bin\i386-win32"
+        mkdir build
+        fpc -Mdelphi -Twin32 -O3 -WG -FE"build" -FU"build\units" TeNRiS.lpr
+        
+    - name: Package game
+      run: |
+        copy DGLEngine.dll build\
+        copy *.dat build\ 2>$null
+        copy *.ini build\ 2>$null
+        copy readme.txt build\ 2>$null
+        if (Test-Path sounds) { xcopy sounds build\sounds\ /E /I }
+        if (Test-Path texture) { xcopy texture build\texture\ /E /I }
+        if (Test-Path girls) { xcopy girls build\girls\ /E /I }
+        
+    - name: Create release package
+      run: |
+        $timestamp = Get-Date -Format "yyyy-MM-dd-HHmm"
+        $branch = "${{ github.ref_name }}"
+        $filename = "TeNRiS-II-$branch-$timestamp.zip"
+        Compress-Archive -Path "build\*" -DestinationPath $filename
+        echo "RELEASE_FILE=$filename" >> $env:GITHUB_ENV
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: TeNRiS-II-${{ github.ref_name }}
+        path: ${{ env.RELEASE_FILE }}
+        
+    - name: Create Release
+      if: github.event_name == 'push'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: build-${{ github.run_number }}-${{ github.ref_name }}
+        name: TeNRiS II Build ${{ github.run_number }} (${{ github.ref_name }})
+        files: ${{ env.RELEASE_FILE }}
+        body: |
+          **Automatic build from branch:** `${{ github.ref_name }}`
+          **Commit:** ${{ github.sha }}
+          **Build:** #${{ github.run_number }}
+          
+          **Game:** Tetris with Numbers - OpenGL version with 3D sound
+          **System Requirements:** Windows 7+, DirectX 9.0c
+          
+          **Controls:**
+          - Arrow keys: Move pieces
+          - Up: Rotate, Space: Drop
+          - R: Restart, S: Toggle music
+          - Esc: Quit
+        prerelease: ${{ github.ref_name != 'main' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
