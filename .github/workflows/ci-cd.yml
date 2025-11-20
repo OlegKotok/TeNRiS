@@ -11,13 +11,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Install Free Pascal
-      run: choco install freepascal -y
+    - name: Install Lazarus
+      run: choco install lazarus -y
       
     - name: Build TeNRiS II
       run: |
-        $env:PATH += ";C:\tools\freepascal\bin\i386-win32"
-        fpc -Mdelphi -Twin32 -O3 -WG TeNRiS.lpr
+        $env:PATH += ";C:\lazarus\fpc\3.2.2\bin\i386-win32"
+        fpc -Mdelphi -Twin32 -O3 -WG -Fu"C:\lazarus\lcl\units\i386-win32" -Fu"C:\lazarus\lcl\units\i386-win32\win32" TeNRiS.dpr
         
     - name: Package game
       run: |
@@ -45,10 +45,5 @@ jobs:
           **TeNRiS II - Working Game**
           
           Extract ZIP and run TeNRiS.exe
-          
-          **Controls:**
-          - Arrow keys: Move pieces
-          - Up: Rotate, Space: Drop
-          - R: Restart, S: Toggle music, Esc: Quit
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
