@@ -4,6 +4,9 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -37,6 +40,16 @@ jobs:
         $env:PATH += ";C:\tools\freepascal\bin\i386-win32"
         fpc -Mdelphi -Twin32 -O3 -WG -Fu. TeNRiS.dpr
         
+    - name: Verify build
+      run: |
+        if (Test-Path "TeNRiS.exe") {
+          echo "✅ TeNRiS.exe created successfully!"
+          echo "File size: $((Get-Item TeNRiS.exe).Length) bytes"
+        } else {
+          echo "❌ TeNRiS.exe not found!"
+          exit 1
+        }
+        
     - name: Package game
       run: |
         mkdir game
@@ -59,9 +72,12 @@ jobs:
         name: TeNRiS II v${{ github.run_number }}
         files: TeNRiS-II.zip
         body: |
-          **TeNRiS II - Working Game**
+          **🎮 TeNRiS II - Working Game!**
           
-          Built with custom Graphics/ShellAPI replacement
-          Extract ZIP and run TeNRiS.exe
+          ✅ Successfully built with Free Pascal
+          ✅ Custom Graphics/ShellAPI replacement  
+          ✅ Compatible with original DGLEngine.dll
+          
+          **Download and extract ZIP, then run TeNRiS.exe**
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
