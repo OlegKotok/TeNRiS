@@ -11,19 +11,31 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Install Lazarus
-      run: choco install lazarus -y
+    - name: Install Free Pascal
+      run: choco install freepascal -y
       
-    - name: Fix DGLEngine header for 32-bit
+    - name: Create OpenGL stub
       run: |
-        # Only remove Tlhelp32, keep OpenGL for the engine
-        (Get-Content DGLEngine_header.pas) -replace 'uses Windows, Tlhelp32, Classes, SysUtils, Graphics, OpenGl;', 'uses Windows, Classes, SysUtils, Graphics, OpenGL;' | Set-Content DGLEngine_header.pas
+        @"
+        unit OpenGL;
+        interface
+        type GLFloat = Single;
+        implementation
+        end.
+        "@ | Out-File -FilePath "OpenGL.pas" -Encoding UTF8
         
-    - name: Build TeNRiS II (32-bit for DGLEngine.dll)
+    - name: Fix source files
       run: |
-        $env:PATH += ";C:\lazarus"
-        # Force 32-bit compilation for compatibility with DGLEngine.dll
-        lazbuild --cpu=i386 --os=win32 --build-mode=Release TeNRiS.lpi
+        # Replace Graphics with our SimpleGraphics
+        (Get-Content TeNRiS.dpr) -replace 'Graphics,', 'SimpleGraphics,' | Set-Content TeNRiS.dpr
+        
+        # Fix DGLEngine header
+        (Get-Content DGLEngine_header.pas) -replace 'uses Windows, Tlhelp32, Classes, SysUtils, Graphics, OpenGl;', 'uses Windows, Classes, SysUtils, SimpleGraphics, OpenGL;' | Set-Content DGLEngine_header.pas
+        
+    - name: Build TeNRiS II
+      run: |
+        $env:PATH += ";C:\tools\freepascal\bin\i386-win32"
+        fpc -Mdelphi -Twin32 -O3 -WG -Fu. TeNRiS.dpr
         
     - name: Package game
       run: |
@@ -35,7 +47,6 @@ jobs:
         xcopy girls game\girls\ /E /I
         copy *.dat game\
         copy *.ini game\
-        copy readme.txt game\
         
     - name: Create ZIP
       run: |
@@ -50,7 +61,7 @@ jobs:
         body: |
           **TeNRiS II - Working Game**
           
-          32-bit OpenGL game with DGLEngine
+          Built with custom Graphics replacement
           Extract ZIP and run TeNRiS.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
