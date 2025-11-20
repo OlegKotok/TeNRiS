@@ -31,10 +31,14 @@ type
 
 const
   TH32CS_SNAPPROCESS = $00000002;
+  SW_ShowNormal = 1;
 
 function CreateToolhelp32Snapshot(dwFlags, th32ProcessID: DWORD): THandle; stdcall; external 'kernel32.dll';
 function Process32First(hSnapshot: THandle; var lppe: TProcessEntry32): BOOL; stdcall; external 'kernel32.dll';
 function Process32Next(hSnapshot: THandle; var lppe: TProcessEntry32): BOOL; stdcall; external 'kernel32.dll';
+
+// ShellAPI replacement
+function ShellExecute(hwnd: HWND; Operation, FileName, Parameters, Directory: PChar; ShowCmd: Integer): HINST; stdcall; external 'shell32.dll' name 'ShellExecuteA';
 
 implementation
 

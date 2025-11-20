@@ -26,8 +26,8 @@ jobs:
         
     - name: Fix source files
       run: |
-        # Replace Graphics with our SimpleGraphics
-        (Get-Content TeNRiS.dpr) -replace 'Graphics,', 'SimpleGraphics,' | Set-Content TeNRiS.dpr
+        # Replace all problematic units with our SimpleGraphics
+        (Get-Content TeNRiS.dpr) -replace 'SysUtils, Windows, Messages, Graphics, ShellAPI,', 'SysUtils, Windows, Messages, SimpleGraphics,' | Set-Content TeNRiS.dpr
         
         # Fix DGLEngine header
         (Get-Content DGLEngine_header.pas) -replace 'uses Windows, Tlhelp32, Classes, SysUtils, Graphics, OpenGl;', 'uses Windows, Classes, SysUtils, SimpleGraphics, OpenGL;' | Set-Content DGLEngine_header.pas
@@ -61,7 +61,7 @@ jobs:
         body: |
           **TeNRiS II - Working Game**
           
-          Built with custom Graphics replacement
+          Built with custom Graphics/ShellAPI replacement
           Extract ZIP and run TeNRiS.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
