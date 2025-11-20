@@ -1,59 +1,54 @@
-name: Package Game
+name: Build Game
 
 on:
   push:
   workflow_dispatch:
 
 jobs:
-  package:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: windows-latest
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Package TeNRiS II
+    - name: Install Free Pascal
+      run: choco install freepascal -y
+      
+    - name: Build TeNRiS II
       run: |
-        mkdir release
-        cp TeNRiS.dpr release/
-        cp DGLEngine_header.pas release/
-        cp DGLEngine.dll release/
-        cp *.dat release/ 2>/dev/null || true
-        cp *.ini release/ 2>/dev/null || true
-        cp readme.txt release/ 2>/dev/null || true
-        cp -r sounds release/ 2>/dev/null || true
-        cp -r texture release/ 2>/dev/null || true
-        cp -r girls release/ 2>/dev/null || true
-        
-        # Create build instructions
-        cat > release/BUILD.md << 'EOF'
-        # How to Build TeNRiS II
-        
-        ## Requirements
-        - Free Pascal Compiler or Delphi
-        - Windows (for DGLEngine.dll)
-        
-        ## Build Commands
-        ```bash
-        # With Free Pascal
+        $env:PATH += ";C:\tools\freepascal\bin\i386-win32"
         fpc -Mdelphi -Twin32 -O3 -WG TeNRiS.dpr
         
-        # With Delphi
-        dcc32 TeNRiS.dpr
-        ```
-        
-        ## Run
-        ```bash
-        TeNRiS.exe
-        ```
-        EOF
-        
-    - name: Create release package
+    - name: Package game
       run: |
-        cd release
-        zip -r ../TeNRiS-II-Source-$(date +%Y%m%d).zip .
+        mkdir game
+        copy TeNRiS.exe game\
+        copy DGLEngine.dll game\
+        xcopy sounds game\sounds\ /E /I
+        xcopy texture game\texture\ /E /I  
+        xcopy girls game\girls\ /E /I
+        copy *.dat game\
+        copy *.ini game\
+        copy readme.txt game\
         
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
+    - name: Create ZIP
+      run: |
+        Compress-Archive -Path game\* -DestinationPath TeNRiS-II.zip
+        
+    - name: Upload Release
+      uses: softprops/action-gh-release@v1
       with:
-        name: TeNRiS-II-Source
-        path: TeNRiS-II-Source-*.zip
+        tag_name: v${{ github.run_number }}
+        name: TeNRiS II v${{ github.run_number }}
+        files: TeNRiS-II.zip
+        body: |
+          **TeNRiS II - Working Game**
+          
+          Extract ZIP and run TeNRiS.exe
+          
+          **Controls:**
+          - Arrow keys: Move pieces
+          - Up: Rotate, Space: Drop
+          - R: Restart, S: Toggle music, Esc: Quit
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
