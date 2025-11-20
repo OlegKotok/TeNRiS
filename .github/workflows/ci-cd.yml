@@ -133,7 +133,9 @@ jobs:
         $env:PATH = "C:\tools\freepascal\bin\i386-win32;" + $env:PATH
         New-Item -ItemType Directory -Force -Path "build"
         fpc -Mdelphi -Twin32 -O3 -WG -FE"build" TeNRiS_Build.lpr
-        if (Test-Path "build\TeNRiS_Build.exe") { Rename-Item "build\TeNRiS_Build.exe" "build\TeNRiS.exe" }
+        if (Test-Path "build\TeNRiS_Build.exe") { 
+          Move-Item "build\TeNRiS_Build.exe" "build\TeNRiS.exe" -Force
+        }
         
     - name: Package game
       run: |
