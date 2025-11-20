@@ -15,16 +15,10 @@ jobs:
     - name: Setup Free Pascal
       run: |
         choco install freepascal --version=3.2.2 -y
-        refreshenv
-        
-    - name: Verify FPC installation
-      run: |
-        $env:PATH = "C:\tools\fpc\bin\i386-win32;" + $env:PATH
-        fpc -h
         
     - name: Build TeNRiS II
       run: |
-        $env:PATH = "C:\tools\fpc\bin\i386-win32;" + $env:PATH
+        $env:PATH = "C:\tools\freepascal\bin\i386-win32;" + $env:PATH
         New-Item -ItemType Directory -Force -Path "build"
         New-Item -ItemType Directory -Force -Path "build\units"
         fpc -Mdelphi -Twin32 -O3 -WG -FE"build" -FU"build\units" TeNRiS.lpr
