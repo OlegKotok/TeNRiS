@@ -14,19 +14,16 @@ jobs:
     - name: Install Lazarus
       run: choco install lazarus -y
       
-    - name: Fix DGLEngine header
+    - name: Fix DGLEngine header for 32-bit
       run: |
-        # Remove problematic dependencies and OpenGL types
-        (Get-Content DGLEngine_header.pas) -replace 'uses Windows, Tlhelp32, Classes, SysUtils, Graphics, OpenGl;', 'uses Windows, Classes, SysUtils, Graphics;' | Set-Content DGLEngine_header.pas
+        # Only remove Tlhelp32, keep OpenGL for the engine
+        (Get-Content DGLEngine_header.pas) -replace 'uses Windows, Tlhelp32, Classes, SysUtils, Graphics, OpenGl;', 'uses Windows, Classes, SysUtils, Graphics, OpenGL;' | Set-Content DGLEngine_header.pas
         
-        # Replace GLFloat with Single
-        (Get-Content DGLEngine_header.pas) -replace 'GLFloat', 'Single' | Set-Content DGLEngine_header.pas
-        (Get-Content DGLEngine_header.pas) -replace 'glFloat', 'Single' | Set-Content DGLEngine_header.pas
-        
-    - name: Build TeNRiS II
+    - name: Build TeNRiS II (32-bit for DGLEngine.dll)
       run: |
         $env:PATH += ";C:\lazarus"
-        lazbuild --build-mode=Release TeNRiS.lpi
+        # Force 32-bit compilation for compatibility with DGLEngine.dll
+        lazbuild --cpu=i386 --os=win32 --build-mode=Release TeNRiS.lpi
         
     - name: Package game
       run: |
@@ -53,6 +50,7 @@ jobs:
         body: |
           **TeNRiS II - Working Game**
           
+          32-bit OpenGL game with DGLEngine
           Extract ZIP and run TeNRiS.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
