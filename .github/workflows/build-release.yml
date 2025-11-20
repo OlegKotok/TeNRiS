@@ -1,0 +1,42 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Free Pascal
+      run: choco install freepascal -y
+      
+    - name: Build game
+      run: |
+        $env:PATH += ";C:\tools\fpc\bin\i386-win32"
+        fpc -Mdelphi -Twin32 -O3 -WG -Xs -Fu. TeNRiS.lpr
+        
+    - name: Package release
+      run: |
+        mkdir release
+        copy TeNRiS.exe release\
+        copy DGLEngine.dll release\
+        copy *.dat release\ 2>$null
+        copy *.ini release\ 2>$null
+        xcopy sounds release\sounds\ /E /I 2>$null
+        xcopy texture release\texture\ /E /I 2>$null
+        xcopy girls release\girls\ /E /I 2>$null
+        
+    - name: Create ZIP
+      run: Compress-Archive -Path release\* -DestinationPath TeNRiS-II.zip
+      
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: TeNRiS-II-Release
+        path: TeNRiS-II.zip

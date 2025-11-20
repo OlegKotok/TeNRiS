@@ -1,0 +1,39 @@
+# Build artifacts
+*.exe
+*.dcu
+*.o
+*.ppu
+*.compiled
+lib/
+bin/
+build/
+release/
+debug/
+units/
+
+# Delphi artifacts
+*.cfg
+*.dof
+*.~*
+*.local
+*.identcache
+*.dsk
+
+# System files
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+
+# Screenshots and archives
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.rar
+*.zip
+
+# Backup files
+*~
+*.bak
+*.orig

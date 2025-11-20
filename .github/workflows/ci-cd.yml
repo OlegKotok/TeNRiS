@@ -1,0 +1,146 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  release:
+    types: [ published ]
+
+env:
+  GAME_NAME: TeNRiS-II
+  FPC_VERSION: 3.2.2
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup FPC
+      run: |
+        choco install freepascal --version=${{ env.FPC_VERSION }} -y
+        refreshenv
+        
+    - name: Test compilation
+      run: |
+        $env:PATH += ";C:\tools\fpc\bin\i386-win32"
+        fpc -Mdelphi -Scghi -O1 -g -Fu. TeNRiS.lpr
+        
+  build-debug:
+    needs: test
+    runs-on: windows-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup FPC
+      run: choco install freepascal --version=${{ env.FPC_VERSION }} -y
+      
+    - name: Build debug version
+      run: |
+        $env:PATH += ";C:\tools\fpc\bin\i386-win32"
+        mkdir debug
+        fpc -Mdelphi -Twin32 -g -gl -Ci -Co -Cr -FE"debug" -FU"debug\units" TeNRiS.lpr
+        
+    - name: Package debug build
+      run: |
+        copy DGLEngine.dll debug\
+        copy *.dat debug\ 2>$null
+        copy *.ini debug\ 2>$null
+        if (Test-Path sounds) { xcopy sounds debug\sounds\ /E /I }
+        if (Test-Path texture) { xcopy texture debug\texture\ /E /I }
+        
+    - name: Upload debug build
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.GAME_NAME }}-Debug
+        path: debug/
+
+  build-release:
+    needs: test
+    runs-on: windows-latest
+    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup FPC
+      run: choco install freepascal --version=${{ env.FPC_VERSION }} -y
+      
+    - name: Build release version
+      run: |
+        $env:PATH += ";C:\tools\fpc\bin\i386-win32"
+        mkdir release
+        fpc -Mdelphi -Twin32 -O3 -Xs -WG -FE"release" -FU"release\units" TeNRiS.lpr
+        
+    - name: Package release
+      run: |
+        copy DGLEngine.dll release\
+        copy *.dat release\ 2>$null
+        copy *.ini release\ 2>$null
+        copy readme.txt release\ 2>$null
+        if (Test-Path sounds) { xcopy sounds release\sounds\ /E /I }
+        if (Test-Path texture) { xcopy texture release\texture\ /E /I }
+        if (Test-Path girls) { xcopy girls release\girls\ /E /I }
+        
+    - name: Create installer script
+      run: |
+        @"
+        @echo off
+        echo Installing ${{ env.GAME_NAME }}...
+        echo.
+        echo Game controls:
+        echo - Arrow keys: Move pieces
+        echo - Up: Rotate
+        echo - Space: Drop quickly
+        echo - R: Restart
+        echo - S: Toggle music
+        echo - F1: Help
+        echo - Esc: Quit
+        echo.
+        echo To run: TeNRiS.exe
+        echo For fullscreen: TeNRiS.exe fullscrean
+        pause
+        "@ | Out-File -FilePath "release\INSTALL.bat" -Encoding ASCII
+        
+    - name: Create ZIP package
+      run: |
+        Compress-Archive -Path "release\*" -DestinationPath "${{ env.GAME_NAME }}-v${{ github.run_number }}.zip"
+        
+    - name: Upload release artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.GAME_NAME }}-Release
+        path: ${{ env.GAME_NAME }}-v${{ github.run_number }}.zip
+        
+    - name: Upload to GitHub Release
+      if: github.event_name == 'release'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ${{ env.GAME_NAME }}-v${{ github.run_number }}.zip
+        name: ${{ env.GAME_NAME }} ${{ github.ref_name }}
+        body: |
+          ## TeNRiS II - Windows Release
+          
+          **What's included:**
+          - TeNRiS.exe (Game executable)
+          - DGLEngine.dll (Graphics engine)
+          - Game assets (sounds, textures, data files)
+          - INSTALL.bat (Setup instructions)
+          
+          **System Requirements:**
+          - Windows 7 or later
+          - DirectX 9.0c or later
+          - 50MB free disk space
+          
+          **How to play:**
+          1. Extract all files to a folder
+          2. Run TeNRiS.exe
+          3. Use arrow keys to play
+          
+          Built with Free Pascal ${{ env.FPC_VERSION }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
