@@ -14,9 +14,14 @@ jobs:
       run: choco install freepascal -y
     - name: Build TeNRiS II
       run: |
-        $env:PATH += ";C:\tools\fpc\bin\i386-win32"
-        mkdir build
-        fpc -Mdelphi -Twin32 -O3 -WG -FE"build" -FU"build\units" TeNRiS.lpr
+        $fpcPath = Get-ChildItem -Path C:\tools\fpc -Filter fpc.exe -Recurse | Select-Object -First 1 -ExpandProperty Directory
+        if ($fpcPath) {
+            $env:PATH = "$($fpcPath.FullName);$env:PATH"
+            Write-Host "Found FPC at: $($fpcPath.FullName)"
+        }
+        mkdir -Force build
+        mkdir -Force build/units
+        fpc -Mdelphi -Twin32 -O3 -WG -FE"build" -FU"build/units" TeNRiS.dpr
     - name: Package game
       run: |
         copy *.dll build\ 2>$null
