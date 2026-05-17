@@ -19,24 +19,24 @@ GRID_WIDTH = 16
 GRID_HEIGHT = 24
 CELL_SIZE = 25
 
-# Colors (Converted from Pascal Hex)
+# Colors (Converted from Pascal BGR Hex to RGB)
 # Active Figure (Green)
 COL_FIG_TL = (0, 255, 0)
 COL_FIG_TR = (0, 255, 0)
-COL_FIG_BL = (65, 190, 58)
-COL_FIG_BR = (87, 149, 72)
+COL_FIG_BL = (58, 190, 65)
+COL_FIG_BR = (72, 149, 87)
 
-# Normal Blocks (Purple/Blue)
-COL_NORM_TL = (170, 0, 255)
-COL_NORM_TR = (170, 96, 255)
-COL_NORM_BL = (0, 128, 255)
-COL_NORM_BR = (0, 0, 255)
+# Normal Blocks (Pink to Red gradient)
+COL_NORM_TL = (255, 0, 170)
+COL_NORM_TR = (255, 96, 170)
+COL_NORM_BL = (255, 128, 0)
+COL_NORM_BR = (255, 0, 0)
 
-# Marked Blocks (Cyan)
-COL_MARK_TL = (128, 255, 255)
-COL_MARK_TR = (160, 255, 255)
-COL_MARK_BL = (0, 255, 255)
-COL_MARK_BR = (0, 255, 255)
+# Marked Blocks (Yellow gradient)
+COL_MARK_TL = (255, 255, 128)
+COL_MARK_TR = (255, 255, 160)
+COL_MARK_BL = (255, 255, 0)
+COL_MARK_BR = (255, 255, 0)
 
 class TenrisGame:
     def __init__(self, headless=False):
@@ -71,7 +71,8 @@ class TenrisGame:
         # Load logo
         try:
             self.logo = pygame.image.load(resource_path(os.path.join("texture", "logo.bmp"))).convert()
-            self.logo.set_colorkey((0, 0, 0))
+            # User request: use white as transparent
+            self.logo.set_colorkey((255, 255, 255))
             self.logo = pygame.transform.scale(self.logo, (150, 80))
         except:
             self.logo = None
@@ -379,10 +380,9 @@ class TenrisGame:
             self.logo_alpha = 5 * (self.logo_time - 5)
         elif 130 < self.logo_time <= 180:
             self.logo_alpha = 250 - 5 * (self.logo_time - 130)
-        elif self.logo_time > 180: # Stay invisible or reset faster?
-            if self.logo_time >= 300: # Shortened loop for better feel
-                self.logo_time = 0
-                self.logo_alpha = 0
+        elif self.logo_time > 3000: # Match original Pascal timing
+            self.logo_time = 0
+            self.logo_alpha = 0
         else:
             if self.logo_time < 5: self.logo_alpha = 0
             # between 55 and 130 it stays at 250ish
@@ -402,8 +402,10 @@ class TenrisGame:
             for x in range(1, 17):
                 if self.map[x][y] > 0:
                     if self.metki[x][y]:
+                        # Marked blocks: blue text on yellow: $0000ff -> (255, 0, 0) in BGR? No, text color was (0,0,255)
                         self.draw_block(x, y, COL_MARK_TL, COL_MARK_TR, COL_MARK_BL, COL_MARK_BR, self.map[x][y], (0, 0, 255))
                     else:
+                        # Normal blocks: white text on pink: $FFFFFF -> (255,255,255)
                         self.draw_block(x, y, COL_NORM_TL, COL_NORM_TR, COL_NORM_BL, COL_NORM_BR, self.map[x][y], (255, 255, 255))
         
         # Figure
@@ -412,6 +414,7 @@ class TenrisGame:
                 if self.current_fig[x][y] > 0:
                     my = self.fig_sy + y
                     if my >= 1:
+                        # Active figure: yellow text on green: $FFFF80 -> (255, 255, 128)
                         self.draw_block(self.fig_sx + x, my, COL_FIG_TL, COL_FIG_TR, COL_FIG_BL, COL_FIG_BR, self.current_fig[x][y], (255, 255, 128))
 
         # UI

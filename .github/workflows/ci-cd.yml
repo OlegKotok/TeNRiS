@@ -9,99 +9,107 @@ jobs:
   build-pascal:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup Free Pascal
-      run: choco install freepascal -y
-    - name: Build TeNRiS II
-      run: |
-        $fpcPath = Get-ChildItem -Path C:\tools\fpc -Filter fpc.exe -Recurse | Select-Object -First 1 -ExpandProperty Directory
-        if ($fpcPath) {
-            $env:PATH = "$($fpcPath.FullName);$env:PATH"
-            Write-Host "Found FPC at: $($fpcPath.FullName)"
-        }
-        mkdir -Force build
-        mkdir -Force build/units
-        fpc -Mdelphi -Twin32 -O3 -WG -FE"build" -FU"build/units" TeNRiS.dpr
-    - name: Package game
-      run: |
-        copy *.dll build\ 2>$null
-        copy *.dat build\ 2>$null
-        copy *.ini build\ 2>$null
-        copy readme.txt build\ 2>$null
-        if (Test-Path sounds) { xcopy sounds build\sounds\ /E /I }
-        if (Test-Path texture) { xcopy texture build\texture\ /E /I }
-    - name: Create release package
-      run: |
-        $timestamp = Get-Date -Format "yyyy-MM-dd-HHmm"
-        $filename = "TeNRiS-II-Pascal-$timestamp.zip"
-        Compress-Archive -Path "build\*" -DestinationPath $filename
-        echo "RELEASE_FILE=$filename" >> $env:GITHUB_ENV
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: TeNRiS-II-Pascal
-        path: ${{ env.RELEASE_FILE }}
+      - uses: actions/checkout@v4
+      - name: Setup Free Pascal
+        run: choco install freepascal -y
+      - name: Build TeNRiS II
+        run: |
+          # Find fpc installation
+          $fpcPath = Get-Command fpc -ErrorAction SilentlyContinue
+          if (-not $fpcPath) {
+            $fpcPath = Get-ChildItem -Path "C:\Program Files\FreePascal" -Filter fpc.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($fpcPath) {
+              $env:PATH = "$($fpcPath.Directory);$env:PATH"
+              Write-Host "Found FPC at: $($fpcPath.Directory)"
+            } else {
+              Write-Host "ERROR: FPC not found. Installed locations:"
+              Get-ChildItem -Path "C:\" -Filter "fpc.exe" -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.Directory }
+              exit 1
+            }
+          }
+          mkdir -Force build
+          mkdir -Force build/units
+          fpc -Mdelphi -Twin32 -O3 -WG -FE"build" -FU"build/units" TeNRiS.dpr
+      - name: Package game
+        run: |
+          copy *.dll build\ 2>$null
+          copy *.dat build\ 2>$null
+          copy *.ini build\ 2>$null
+          copy readme.txt build\ 2>$null
+          if (Test-Path sounds) { xcopy sounds build\sounds\ /E /I }
+          if (Test-Path texture) { xcopy texture build\texture\ /E /I }
+      - name: Create release package
+        run: |
+          $timestamp = Get-Date -Format "yyyy-MM-dd-HHmm"
+          $filename = "TeNRiS-II-Pascal-$timestamp.zip"
+          Compress-Archive -Path "build\*" -DestinationPath $filename
+          echo "RELEASE_FILE=$filename" >> $env:GITHUB_ENV
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TeNRiS-II-Pascal
+          path: ${{ env.RELEASE_FILE }}
 
   build-python:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python 3.14
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.14-dev'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pygame-ce pyinstaller Pillow
-    - name: Build Standalone EXE
-      run: |
-        python create_installer.py
-    - name: Prepare EXE for upload
-      run: |
-        $timestamp = Get-Date -Format "yyyy-MM-dd"
-        $file_name = "TeNRiS-II.exe"
-        Move-Item -Path "dist\TeNRiS.exe" -Destination "dist\$file_name"
-        echo "EXE_NAME=$new_name" >> $env:GITHUB_ENV
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: TeNRiS-II-Windows-Python14-Release
-        path: dist\${{ env.EXE_NAME }}
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14-dev"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pygame-ce pyinstaller Pillow
+      - name: Build Standalone EXE
+        run: |
+          python create_installer.py
+      - name: Prepare EXE for upload
+        run: |
+          $timestamp = Get-Date -Format "yyyy-MM-dd"
+          $file_name = "TeNRiS-II.exe"
+          Move-Item -Path "dist\TeNRiS.exe" -Destination "dist\$file_name"
+          echo "EXE_NAME=$new_name" >> $env:GITHUB_ENV
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TeNRiS-II-Windows-Python14-Release
+          path: dist\${{ env.EXE_NAME }}
 
   release:
     needs: [build-pascal, build-python]
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     steps:
-    - name: Download Pascal Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: TeNRiS-II-Pascal
-    - name: Download Python Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: TeNRiS-II-Windows-Python-Python14-Release
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: build-${{ github.run_number }}
-        name: TeNRiS II Build ${{ github.run_number }}
-        files: |
-          TeNRiS-II-Pascal-*.zip
-          *.exe
-        body: |
-          **TeNRiS II Automated Release**
-          
-          **Downloads:**
-          - **`.exe` file:** Modern Pygame-ce port (Standalone, Python 3.14).
-          - **`.zip` file:** Classic Pascal OpenGL version.
-          
-          **Controls:**
-          - Arrow keys: Move
-          - Up: Rotate
-          - Space: Mega-drop
-          - R: Restart, S: Toggle music
-          - Esc: Quit
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download Pascal Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: TeNRiS-II-Pascal
+      - name: Download Python Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: TeNRiS-II-Windows-Python-Python14-Release
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: TeNRiS II Build ${{ github.run_number }}
+          files: |
+            TeNRiS-II-Pascal-*.zip
+            *.exe
+          body: |
+            **TeNRiS II Automated Release**
+
+            **Downloads:**
+            - **`.exe` file:** Modern Pygame-ce port (Standalone, Python 3.14).
+            - **`.zip` file:** Classic Pascal OpenGL version.
+
+            **Controls:**
+            - Arrow keys: Move
+            - Up: Rotate
+            - Space: Mega-drop
+            - R: Restart, S: Toggle music
+            - Esc: Quit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
