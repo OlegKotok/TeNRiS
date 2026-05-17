@@ -10,26 +10,29 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Free Pascal
-        run: choco install freepascal -y
+      - name: Setup Lazarus (FPC + LCL)
+        run: choco install lazarus -y
       - name: Build TeNRiS II
         run: |
-          # Find fpc installation
-          $fpcPath = Get-Command fpc -ErrorAction SilentlyContinue
-          if (-not $fpcPath) {
-            $fpcPath = Get-ChildItem -Path "C:\tools\freepascal" -Filter fpc.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($fpcPath) {
-              $env:PATH = "$($fpcPath.Directory);$env:PATH"
-              Write-Host "Found FPC at: $($fpcPath.Directory)"
-            } else {
-              Write-Host "ERROR: FPC not found. Installed locations:"
-              Get-ChildItem -Path "C:\" -Filter "fpc.exe" -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.Directory }
-              exit 1
-            }
+          # Find fpc
+          $fpcExe = Get-ChildItem -Path "C:\lazarus" -Filter fpc.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $fpcExe) {
+            Write-Error "FPC not found after Lazarus install"; exit 1
           }
+          $env:PATH = "$($fpcExe.Directory);$env:PATH"
+          Write-Host "Found FPC at: $($fpcExe.Directory)"
+
+          # Find LCL Graphics unit (graphics.ppu)
+          $graphicsPPU = Get-ChildItem -Path "C:\lazarus" -Filter "graphics.ppu" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $graphicsPPU) {
+            Write-Error "LCL Graphics unit not found"; exit 1
+          }
+          $lclDir = $graphicsPPU.Directory.FullName
+          Write-Host "LCL units at: $lclDir"
+
           mkdir -Force build
           mkdir -Force build/units
-          fpc -Mdelphi -Twin32 -O3 -WG -FE"build" -FU"build/units" TeNRiS.dpr
+          fpc -Mdelphi -Twin32 -O3 -WG -FE"build" -FU"build/units" -Fu"$lclDir" TeNRiS.dpr
       - name: Package game
         run: |
           copy *.dll build\ 2>$null
