@@ -75,3 +75,6 @@ TeNRiS.spec
 *.dll
 # Note: DGLEngine.dll is currently tracked, so I won't ignore it unless you want to.
 # If you want to keep the original DLL in the repo, keep it as is.
+
+.gemini/
+gha-creds-*.json
