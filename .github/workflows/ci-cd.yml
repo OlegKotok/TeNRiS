@@ -10,28 +10,27 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Lazarus (FPC + LCL)
-        run: choco install lazarus -y
+      - name: Setup FPC i386 + LCL
+        run: |
+          # Install FPC i386-win32
+          $fpcUrl = "https://sourceforge.net/projects/freepascal/files/Win32/3.2.2/fpc-3.2.2.i386-win32.exe/download"
+          Invoke-WebRequest -Uri $fpcUrl -OutFile fpc-setup.exe
+          Start-Process -Wait -FilePath fpc-setup.exe -ArgumentList "/VERYSILENT /DIR=C:\fpc32"
+          $env:PATH = "C:\fpc32\bin\i386-win32;$env:PATH"
+
+          # Download Lazarus zip for LCL i386 units only
+          $lazUrl = "https://sourceforge.net/projects/lazarus/files/Lazarus%20Windows%2032%20bits/Lazarus%203.6/lazarus-3.6-fpc-3.2.2-win32.exe/download"
+          Invoke-WebRequest -Uri $lazUrl -OutFile laz-setup.exe
+          Start-Process -Wait -FilePath laz-setup.exe -ArgumentList "/VERYSILENT /DIR=C:\lazarus32"
       - name: Build TeNRiS II
         run: |
-          # Find fpc
-          $fpcExe = Get-ChildItem -Path "C:\lazarus" -Filter fpc.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $fpcExe) {
-            Write-Error "FPC not found after Lazarus install"; exit 1
-          }
-          $env:PATH = "$($fpcExe.Directory);$env:PATH"
-          Write-Host "Found FPC at: $($fpcExe.Directory)"
-
-          # Find LCL Graphics unit (graphics.ppu)
-          $graphicsPPU = Get-ChildItem -Path "C:\lazarus" -Filter "graphics.ppu" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $graphicsPPU) {
-            Write-Error "LCL Graphics unit not found"; exit 1
-          }
+          $env:PATH = "C:\fpc32\bin\i386-win32;$env:PATH"
+          $graphicsPPU = Get-ChildItem -Path "C:\lazarus32" -Filter "graphics.ppu" -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -like "*i386*" } | Select-Object -First 1
+          if (-not $graphicsPPU) { Write-Error "LCL i386 Graphics unit not found"; exit 1 }
           $lclDir = $graphicsPPU.Directory.FullName
-          Write-Host "LCL units at: $lclDir"
-
-          mkdir -Force build
-          mkdir -Force build/units
+          Write-Host "LCL i386 units at: $lclDir"
+          mkdir -Force build; mkdir -Force build/units
           fpc -Mdelphi -Twin32 -O3 -WG -FE"build" -FU"build/units" -Fu"$lclDir" TeNRiS.dpr
       - name: Package game
         run: |
