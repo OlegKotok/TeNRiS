@@ -75,6 +75,10 @@ build.bat
 fpc -Mdelphi -Twin32 -O3 -WG -Fu. TeNRiS.dpr
 ```
 
+## License
+
+This project is licensed under the GPL-3.0 License. See the LICENSE file for details.
+
 ---
 
 *Original game design and implementation © 2007*
