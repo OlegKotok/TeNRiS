@@ -1,13 +1,11 @@
 # TeNRiS II
 
-![TeNRiS II logo](logo2.bmp)
+![TeNRiS II Screenshot](TeNRiS.PNG)
 
 **Tetris with Numbers** - OpenGL version with 3D sound.
 
 
 Original game concept from 2007.
-
-![TeNRiS II Screenshot](TeNRiS.png)
 
 
 ## Game Rules
