@@ -10,26 +10,25 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup FPC i386 + LCL
+      - name: Setup Lazarus win32 (FPC i386 + LCL)
         run: |
-          # Install FPC i386-win32 (direct mirror, no redirect)
-          Invoke-WebRequest -Uri "https://downloads.sourceforge.net/project/freepascal/Win32/3.2.2/fpc-3.2.2.i386-win32.exe" `
-            -OutFile "C:\fpc-setup.exe" -UserAgent "wget"
-          Start-Process -Wait -FilePath "C:\fpc-setup.exe" -ArgumentList "/VERYSILENT /DIR=C:\fpc32"
-          $env:PATH = "C:\fpc32\bin\i386-win32;$env:PATH"
-
-          # Install Lazarus win32 for LCL i386 units
           Invoke-WebRequest -Uri "https://downloads.sourceforge.net/project/lazarus/Lazarus%20Windows%2032%20bits/Lazarus%203.6/lazarus-3.6-fpc-3.2.2-win32.exe" `
             -OutFile "C:\laz-setup.exe" -UserAgent "wget"
           Start-Process -Wait -FilePath "C:\laz-setup.exe" -ArgumentList "/VERYSILENT /DIR=C:\lazarus32"
       - name: Build TeNRiS II
         run: |
-          $env:PATH = "C:\fpc32\bin\i386-win32;$env:PATH"
+          # Use FPC bundled with Lazarus (same RTL as LCL units)
+          $fpcExe = Get-ChildItem -Path "C:\lazarus32\fpc" -Filter "ppc386.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $fpcExe) { Write-Error "ppc386.exe not found"; exit 1 }
+          $env:PATH = "$($fpcExe.Directory.FullName);$env:PATH"
+          Write-Host "FPC at: $($fpcExe.FullName)"
+
           $graphicsPPU = Get-ChildItem -Path "C:\lazarus32" -Filter "graphics.ppu" -Recurse -ErrorAction SilentlyContinue |
             Where-Object { $_.FullName -like "*i386*" } | Select-Object -First 1
-          if (-not $graphicsPPU) { Write-Error "LCL i386 Graphics unit not found"; exit 1 }
+          if (-not $graphicsPPU) { Write-Error "LCL graphics.ppu not found"; exit 1 }
           $lclDir = $graphicsPPU.Directory.FullName
-          Write-Host "LCL i386 units at: $lclDir"
+          Write-Host "LCL units at: $lclDir"
+
           mkdir -Force build; mkdir -Force build/units
           fpc -Mdelphi -Twin32 -O3 -WG -FE"build" -FU"build/units" -Fu"$lclDir" TeNRiS.dpr
       - name: Package game
