@@ -5,6 +5,10 @@ import sys
 
 import pygame
 
+#Themes selector
+from themes.Nostalgic import NostalgicTheme as Theme
+#from themes.NeonPuzzler import NeonPuzzlerTheme as Theme
+#from themes.DeepOcean import DeepOceanTheme as Theme
 
 def resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
@@ -22,29 +26,12 @@ GRID_WIDTH = 16
 GRID_HEIGHT = 24
 CELL_SIZE = 25
 
-# Colors (Converted from Pascal BGR Hex to RGB)
-# Active Figure (Green)
-COL_FIG_TL = (0, 255, 0)
-COL_FIG_TR = (0, 255, 0)
-COL_FIG_BL = (58, 190, 65)
-COL_FIG_BR = (72, 149, 87)
-
-# Normal Blocks (Pink to Red gradient)
-COL_NORM_TL = (255, 0, 170)
-COL_NORM_TR = (255, 96, 170)
-COL_NORM_BL = (255, 128, 0)
-COL_NORM_BR = (255, 0, 0)
-
-# Marked Blocks (Yellow gradient)
-COL_MARK_TL = (255, 255, 128)
-COL_MARK_TR = (255, 255, 160)
-COL_MARK_BL = (255, 255, 0)
-COL_MARK_BR = (255, 255, 0)
 
 
 class TenrisGame:
     def __init__(self, headless=False):
         self.headless = headless
+        self.theme = Theme()
         if not headless:
             pygame.init()
             self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -89,16 +76,18 @@ class TenrisGame:
         except:
             self.logo = None
 
-        # Fonts with heavy fallback
+        # Fonts from theme
         self.font_main = None
         self.font_score = None
         if pygame.font.get_init():
+            fonts = self.theme.get_fonts()
             try:
-                self.font_main = pygame.font.SysFont("Comic Sans MS", 16, bold=True)
-                self.font_score = pygame.font.SysFont("Arial", 20, bold=True)
+                mf = fonts["main"]
+                self.font_main = pygame.font.SysFont(mf[0], mf[1], bold=mf[2])
+                sf = fonts["score"]
+                self.font_score = pygame.font.SysFont(sf[0], sf[1], bold=sf[2])
             except:
                 pass
-
             if not self.font_main:
                 try:
                     self.font_main = pygame.font.SysFont(None, 24)
@@ -386,15 +375,14 @@ class TenrisGame:
                 (rect.x + rect.width, rect.y + i),
             )
 
-    def draw_block(
-        self, x_grid, y_grid, c_tl, c_tr, c_bl, c_br, val, txt_col=(255, 255, 255)
-    ):
+    def draw_block(self, x_grid, y_grid, c_tl, c_tr, c_bl, c_br, val, txt_col=(255, 255, 255)):
         if self.headless or not self.screen:
             return
         px = x_grid * 25 - 25
         py = y_grid * 25 - 25
         rect = pygame.Rect(px + 1, py, 24, 24)
         self.draw_gradient_rect(rect, c_tl, c_tr, c_bl, c_br)
+        self.theme.draw_block_background(self.screen, rect)
         pygame.draw.rect(self.screen, (0, 0, 0), (px, py, 25, 25), 1)
 
         if self.font_main:
@@ -454,28 +442,18 @@ class TenrisGame:
             for x in range(1, 17):
                 if self.map[x][y] > 0:
                     if self.metki[x][y]:
-                        # Marked blocks: blue text on yellow: $0000ff -> (255, 0, 0) in BGR? No, text color was (0,0,255)
                         self.draw_block(
-                            x,
-                            y,
-                            COL_MARK_TL,
-                            COL_MARK_TR,
-                            COL_MARK_BL,
-                            COL_MARK_BR,
-                            self.map[x][y],
-                            (0, 0, 255),
+                            x, y,
+                            self.theme.COL_MARK_TL, self.theme.COL_MARK_TR,
+                            self.theme.COL_MARK_BL, self.theme.COL_MARK_BR,
+                            self.map[x][y], self.theme.TEXT_MARK,
                         )
                     else:
-                        # Normal blocks: white text on pink: $FFFFFF -> (255,255,255)
                         self.draw_block(
-                            x,
-                            y,
-                            COL_NORM_TL,
-                            COL_NORM_TR,
-                            COL_NORM_BL,
-                            COL_NORM_BR,
-                            self.map[x][y],
-                            (255, 255, 255),
+                            x, y,
+                            self.theme.COL_NORM_TL, self.theme.COL_NORM_TR,
+                            self.theme.COL_NORM_BL, self.theme.COL_NORM_BR,
+                            self.map[x][y], self.theme.TEXT_NORM,
                         )
 
         # Figure
@@ -484,28 +462,23 @@ class TenrisGame:
                 if self.current_fig[x][y] > 0:
                     my = self.fig_sy + y
                     if my >= 1:
-                        # Active figure: yellow text on green: $FFFF80 -> (255, 255, 128)
                         self.draw_block(
-                            self.fig_sx + x,
-                            my,
-                            COL_FIG_TL,
-                            COL_FIG_TR,
-                            COL_FIG_BL,
-                            COL_FIG_BR,
-                            self.current_fig[x][y],
-                            (255, 255, 128),
+                            self.fig_sx + x, my,
+                            self.theme.COL_FIG_TL, self.theme.COL_FIG_TR,
+                            self.theme.COL_FIG_BL, self.theme.COL_FIG_BR,
+                            self.current_fig[x][y], self.theme.TEXT_FIG,
                         )
 
         # UI
         if self.font_score:
             score_surf = self.font_score.render(
-                f"Score: {self.score}", True, (255, 0, 255)
+                f"Score: {self.score}", True, self.theme.TEXT_SCORE
             )
             self.screen.blit(score_surf, (285, 20))
 
         if self.font_main:
             high_surf = self.font_main.render(
-                f"top score: {self.high_score}", True, (0, 255, 0)
+                f"top score: {self.high_score}", True, self.theme.TEXT_HIGH
             )
             self.screen.blit(high_surf, (5, 5))
 
@@ -516,6 +489,7 @@ class TenrisGame:
                 if msg:
                     self.screen.blit(msg, (100, 300))
 
+        self.theme.apply_effects(self.screen)
         pygame.display.flip()
 
     def run(self):
