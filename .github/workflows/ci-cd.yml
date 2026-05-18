@@ -10,27 +10,32 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Free Pascal i386
+      - name: Install Free Pascal
         run: choco install freepascal -y
-
+      - name: Fix source files
+        run: |
+          (Get-Content TeNRiS.dpr) -replace 'SysUtils, Windows, Messages, Graphics, ShellAPI,', 'SysUtils, Windows, Messages, SimpleGraphics,' | Set-Content TeNRiS.dpr
+          (Get-Content DGLEngine_header.pas) -replace 'uses Windows, Tlhelp32, Classes, SysUtils, Graphics, OpenGl;', 'uses Windows, Classes, SysUtils, SimpleGraphics, OpenGL;' | Set-Content DGLEngine_header.pas
+      - name: Create OpenGL stub
+        run: '"unit OpenGL; interface type GLFloat = Single; implementation end." | Out-File -FilePath "OpenGL.pas" -Encoding UTF8'
       - name: Build TeNRiS II
         run: |
           $env:PATH += ";C:\tools\freepascal\bin\i386-win32"
-          mkdir -Force build; mkdir -Force build/units
-          fpc -Mdelphi -Twin32 -O3 -WG -FE"build" -FU"build/units" -Fu. TeNRiS.dpr
+          fpc -Mdelphi -Twin32 -O3 -WG -Fu. TeNRiS.dpr
       - name: Package game
         run: |
-          copy *.dll build\ 2>$null
-          copy *.dat build\ 2>$null
-          copy *.ini build\ 2>$null
-          copy readme.txt build\ 2>$null
-          if (Test-Path sounds) { xcopy sounds build\sounds\ /E /I }
-          if (Test-Path texture) { xcopy texture build\texture\ /E /I }
+          mkdir game
+          copy TeNRiS.exe game\
+          copy DGLEngine.dll game\
+          copy *.dat game\
+          copy *.ini game\ 2>$null
+          if (Test-Path sounds) { xcopy sounds game\sounds\ /E /I }
+          if (Test-Path texture) { xcopy texture game\texture\ /E /I }
       - name: Create release package
         run: |
           $timestamp = Get-Date -Format "yyyy-MM-dd-HHmm"
           $filename = "TeNRiS-II-Pascal-$timestamp.zip"
-          Compress-Archive -Path "build\*" -DestinationPath $filename
+          Compress-Archive -Path "game\*" -DestinationPath $filename
           echo "RELEASE_FILE=$filename" >> $env:GITHUB_ENV
       - name: Upload artifact
         uses: actions/upload-artifact@v4
