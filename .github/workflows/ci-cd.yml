@@ -12,27 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Setup Free Pascal i386
         run: choco install freepascal -y
-      - name: Create Graphics stub
-        run: |
-          @"
-          unit Graphics;
-          interface
-          uses Windows;
-          type
-            TBitmap = class
-            public
-              Handle: HBITMAP;
-              procedure LoadFromFile(const FileName: string);
-              constructor Create;
-              destructor Destroy; override;
-            end;
-          implementation
-          constructor TBitmap.Create; begin Handle := 0; end;
-          procedure TBitmap.LoadFromFile(const FileName: string);
-          begin Handle := LoadImage(0, PChar(FileName), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE); end;
-          destructor TBitmap.Destroy; begin if Handle <> 0 then DeleteObject(Handle); inherited; end;
-          end.
-          "@ | Out-File -FilePath "Graphics.pas" -Encoding UTF8
+
       - name: Build TeNRiS II
         run: |
           $env:PATH += ";C:\tools\freepascal\bin\i386-win32"
