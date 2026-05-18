@@ -12,16 +12,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: Setup FPC i386 + LCL
         run: |
-          # Install FPC i386-win32
-          $fpcUrl = "https://sourceforge.net/projects/freepascal/files/Win32/3.2.2/fpc-3.2.2.i386-win32.exe/download"
-          Invoke-WebRequest -Uri $fpcUrl -OutFile fpc-setup.exe
-          Start-Process -Wait -FilePath fpc-setup.exe -ArgumentList "/VERYSILENT /DIR=C:\fpc32"
+          # Install FPC i386-win32 (direct mirror, no redirect)
+          Invoke-WebRequest -Uri "https://downloads.sourceforge.net/project/freepascal/Win32/3.2.2/fpc-3.2.2.i386-win32.exe" `
+            -OutFile "C:\fpc-setup.exe" -UserAgent "wget"
+          Start-Process -Wait -FilePath "C:\fpc-setup.exe" -ArgumentList "/VERYSILENT /DIR=C:\fpc32"
           $env:PATH = "C:\fpc32\bin\i386-win32;$env:PATH"
 
-          # Download Lazarus zip for LCL i386 units only
-          $lazUrl = "https://sourceforge.net/projects/lazarus/files/Lazarus%20Windows%2032%20bits/Lazarus%203.6/lazarus-3.6-fpc-3.2.2-win32.exe/download"
-          Invoke-WebRequest -Uri $lazUrl -OutFile laz-setup.exe
-          Start-Process -Wait -FilePath laz-setup.exe -ArgumentList "/VERYSILENT /DIR=C:\lazarus32"
+          # Install Lazarus win32 for LCL i386 units
+          Invoke-WebRequest -Uri "https://downloads.sourceforge.net/project/lazarus/Lazarus%20Windows%2032%20bits/Lazarus%203.6/lazarus-3.6-fpc-3.2.2-win32.exe" `
+            -OutFile "C:\laz-setup.exe" -UserAgent "wget"
+          Start-Process -Wait -FilePath "C:\laz-setup.exe" -ArgumentList "/VERYSILENT /DIR=C:\lazarus32"
       - name: Build TeNRiS II
         run: |
           $env:PATH = "C:\fpc32\bin\i386-win32;$env:PATH"
