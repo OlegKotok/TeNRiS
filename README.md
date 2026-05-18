@@ -1,8 +1,14 @@
 # TeNRiS II
 
+![TeNRiS II logo](logo2.bmp)
+
 **Tetris with Numbers** - OpenGL version with 3D sound.
 
+
 Original game concept from 2007.
+
+![TeNRiS II Screenshot](TeNRiS.png)
+
 
 ## Game Rules
 
@@ -33,30 +39,42 @@ Instead of traditional Tetris blocks, pieces contain numbers (1-9). When two adj
 
 ## System Requirements
 
-- Windows 7 or later
-- DirectX 9.0c compatible graphics
+**Python version (Windows & macOS):**
+- Python 3.10+
+- pygame-ce (`pip install pygame-ce`)
+
+**Pascal version (Windows only):**
+- Windows XP or later
+- DirectX 8.0c compatible graphics
 - Sound card for 3D audio
 
-## Building
+## Building & Running
 
-Requires Free Pascal Compiler:
+### Python — Windows & macOS
 
 ```bash
-# Windows
-build_windows.bat
+# Install dependencies
+pip install pygame-ce
 
-# Cross-platform
-make install
+# Run directly
+python tenris.py
+
+# Build standalone executable
+pip install pyinstaller Pillow
+python create_installer.py
 ```
 
-## Running
+The standalone `.exe` (Windows) or app (macOS) will be created in the `dist/` folder.
 
-```bash
-# Windowed mode
-TeNRiS.exe
+### Free Pascal Build — Windows only
 
-# Fullscreen mode  
-TeNRiS.exe fullscrean
+Requires [Free Pascal Compiler](https://www.freepascal.org/):
+
+```bat
+build.bat 
+
+# or manually
+fpc -Mdelphi -Twin32 -O3 -WG -Fu. TeNRiS.dpr
 ```
 
 ---
